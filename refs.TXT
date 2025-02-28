@@ -1,0 +1,6 @@
+https://pages.ably.com/hubfs/the-websocket-handbook.pdf
+https://ably.com/topic/websockets
+
+https://www.youtube.com/watch?v=4Uwq0xB30JE
+
+https://www.fernandok.com/2019/12/iot-poderosa-com-nodejs-esp32.html

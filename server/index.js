@@ -4,7 +4,7 @@ const http = require('http')
 //criar um websocket importando o modulo ws
 const {WebSocketServer} = require('ws')
 const url = require('url')
-cont uuid = require('uuid').v4
+const uuid = require('uuid').v4
 
 
 
@@ -15,13 +15,27 @@ const port = 8000
 const connections = { }
 const users = { }
 
+const broadcastUsers = () => {
+    Object.keys(connections).forEach(uuid => {
+        const connection = connections[uuid]
+        connection.send(message)
+    })
+}
+
 
 const handleMessage = (bytes, uuid) => {
+    const message = JSON.parse(bytes.toString())
+    const user = users[uuid]
+    user.state = message
 
+    broadcastUsers()
 }
 
 const handleClose = uuid => {
+    delete connections[uuid]
+    delete users[uuid]
 
+    broadcast()
 }
 
 

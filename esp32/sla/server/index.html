@@ -1,0 +1,75 @@
+<!--Isso foi somente um teste de conceito gerado com chatgpt para testes-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Button State</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        #status {
+            font-size: 24px;
+            font-weight: bold;
+            padding: 20px;
+            display: inline-block;
+            border-radius: 8px;
+            background-color: gray;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>ESP32 Button Status</h1>
+    <div id="status">Waiting for data...</div>
+
+    <script>
+        const statusDiv = document.getElementById("status");
+
+        const socket = new WebSocket("ws://localhost:8080");
+
+        socket.onopen = () => {
+            console.log("Connected to WebSocket Server");
+        };
+
+        socket.onmessage = (event) => {
+            console.log("Raw message received:", event.data); // debug log
+
+            // Check if the data is a string or already an object
+            let data;
+            if (typeof event.data === "string") {
+                try {
+                    data = JSON.parse(event.data);
+                } catch (e) {
+                    console.error("Invalid JSON received:", event.data);
+                    return;
+                }
+            } else {
+                data = event.data; // Assuming it's already a parsed object
+            }
+
+            if (data.state === "pressed") {
+                statusDiv.innerText = "Button Pressed";
+                statusDiv.style.backgroundColor = "red";
+            } else if (data.state === "released") {
+                statusDiv.innerText = "Button Released";
+                statusDiv.style.backgroundColor = "green";
+            }
+        };
+
+        socket.onclose = () => {
+            console.log("Disconnected from WebSocket Server");
+            statusDiv.innerText = "Disconnected";
+            statusDiv.style.backgroundColor = "gray";
+        };
+
+        socket.onerror = (error) => {
+            console.error("WebSocket Error:", error);
+        };
+    </script>
+</body>
+</html>
