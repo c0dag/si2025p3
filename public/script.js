@@ -1380,6 +1380,137 @@ function searchLots(query) {
   })
 }
 
+// Função para testar dados do ESP32
+async function testESP32Data() {
+  if (!currentUser || currentUser.role !== "admin") {
+    showToast("Apenas administradores podem testar ESP32", "error")
+    return
+  }
+
+  // Pegar uma vaga aleatória do estacionamento atual
+  const currentSpaces = parkingLots[currentLot].spaces
+  if (currentSpaces.length === 0) {
+    showToast("Adicione algumas vagas primeiro para testar", "warning")
+    return
+  }
+
+  const randomSpace = currentSpaces[Math.floor(Math.random() * currentSpaces.length)]
+  const sensorId = extractSensorId(randomSpace.id)
+
+  // Simular mudança de status (inverter o status atual)
+  const newStatus = !randomSpace.available
+
+  console.log(`=== TESTE ESP32 ===`)
+  console.log(`Testando sensor ${sensorId} no lot ${currentLot}`)
+  console.log(`Status atual: ${randomSpace.available}, Novo status: ${newStatus}`)
+  console.log(`Priority atual: ${randomSpace.priority} (deve ser preservada)`)
+
+  try {
+    const response = await fetch("/api/sensors/esp32-test", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSensor: sensorId,
+        lot: currentLot,
+        available: newStatus,
+        // Nota: priority NÃO é enviada, simulando o ESP32
+      }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      showToast(
+        `✅ ESP32 Test: Sensor ${randomSpace.id} → ${newStatus ? "Disponível" : "Ocupado"}. Priority preservada: ${data.preservedPriority}`,
+        "success",
+      )
+
+      // Atualizar dados locais
+      randomSpace.available = newStatus
+      randomSpace.timestamp = new Date().toISOString()
+      // Nota: priority é preservada automaticamente
+
+      updateUI()
+    } else {
+      showToast(`Erro no teste ESP32: ${data.message}`, "error")
+    }
+  } catch (error) {
+    console.error("Erro no teste ESP32:", error)
+    showToast("Erro de conexão no teste ESP32", "error")
+  }
+}
+
+// Função para demonstrar o problema e solução
+async function demonstratePriorityPersistence() {
+  if (!currentUser || currentUser.role !== "admin") {
+    showToast("Apenas administradores podem executar demonstração", "error")
+    return
+  }
+
+  const currentSpaces = parkingLots[currentLot].spaces
+  if (currentSpaces.length === 0) {
+    showToast("Adicione algumas vagas primeiro", "warning")
+    return
+  }
+
+  try {
+    // Passo 1: Definir uma vaga como prioritária
+    const testSpace = currentSpaces[0]
+    const sensorId = extractSensorId(testSpace.id)
+
+    showToast("🔄 Demonstração iniciada: Definindo vaga como prioritária...", "info")
+
+    await toggleSpacePriority(testSpace.id, true)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    // Passo 2: Simular dados do ESP32 (sem priority)
+    showToast("📡 Simulando dados do ESP32 (sem campo priority)...", "info")
+
+    const response = await fetch("/api/sensors/esp32-test", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idSensor: sensorId,
+        lot: currentLot,
+        available: !testSpace.available,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Atualizar UI
+      testSpace.available = !testSpace.available
+      updateUI()
+
+      showToast(
+        `✅ Demonstração concluída! Priority foi preservada: ${data.preservedPriority}. A vaga ${testSpace.id} continua prioritária mesmo após receber dados do ESP32!`,
+        "success",
+      )
+    }
+  } catch (error) {
+    console.error("Erro na demonstração:", error)
+    showToast("Erro na demonstração", "error")
+  }
+}
+
+// Funções para o modal de demonstração
+function showDemoModal() {
+  const modal = document.getElementById("demo-modal")
+  modal.classList.add("active")
+}
+
+function hideDemoModal() {
+  const modal = document.getElementById("demo-modal")
+  modal.classList.remove("active")
+}
+
 // Initialize the application
 async function init() {
   // Check authentication first
@@ -1397,6 +1528,12 @@ async function init() {
   removeSpaceBtn.addEventListener("click", enterSelectionMode)
   cancelSelectionBtn.addEventListener("click", exitSelectionMode)
   confirmSelectionBtn.addEventListener("click", removeSelectedSpaces)
+
+  // Adicionar event listener para teste ESP32
+  const testESP32Btn = document.getElementById("test-esp32-btn")
+  if (testESP32Btn) {
+    testESP32Btn.addEventListener("click", testESP32Data)
+  }
 
   // Add event listeners for user management
   addUserBtn.addEventListener("click", showAddUserModal)
@@ -1441,6 +1578,24 @@ async function init() {
   // Users list modal event listeners
   closeUsersListModalBtn.addEventListener("click", hideUsersListModal)
 
+  // Event listeners para modal de demonstração
+  const closeDemoModalBtn = document.querySelector(".close-demo-modal")
+  const cancelDemoBtn = document.getElementById("cancel-demo-btn")
+  const runDemoBtn = document.getElementById("run-demo-btn")
+
+  if (closeDemoModalBtn) closeDemoModalBtn.addEventListener("click", hideDemoModal)
+  if (cancelDemoBtn) cancelDemoBtn.addEventListener("click", hideDemoModal)
+  if (runDemoBtn)
+    runDemoBtn.addEventListener("click", () => {
+      hideDemoModal()
+      demonstratePriorityPersistence()
+    })
+
+  // Adicionar duplo clique no botão ESP32 para abrir demonstração
+  if (testESP32Btn) {
+    testESP32Btn.addEventListener("dblclick", showDemoModal)
+  }
+
   // Close modals when clicking outside
   window.addEventListener("click", (event) => {
     if (event.target === addSpaceModal) {
@@ -1458,6 +1613,10 @@ async function init() {
     if (event.target === removeLotModal) {
       hideRemoveLotModal()
     }
+    const demoModal = document.getElementById("demo-modal")
+    if (event.target === demoModal) {
+      hideDemoModal()
+    }
   })
 
   // Clean up on page unload
@@ -1471,6 +1630,8 @@ window.toggleSpacePriority = toggleSpacePriority
 window.deleteUser = deleteUser
 window.exportParkingData = exportParkingData
 window.searchLots = searchLots
+window.testESP32Data = testESP32Data
+window.demonstratePriorityPersistence = demonstratePriorityPersistence
 
 // Start the application when the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", init)

@@ -399,40 +399,49 @@ app.post("/api/sensors", authenticateToken, requireAdmin, (req, res) => {
 
   // Se os dados são um array
   if (Array.isArray(data)) {
-    const queries = data.map(({ idSensor, lot, available, priority = false }) => {
+    const queries = data.map(({ idSensor, lot, available, priority }) => {
       return new Promise((resolve, reject) => {
-        // Primeiro, verificar se o status mudou
-        db.get("SELECT available FROM sensors WHERE idSensor = ? AND lot = ?", [idSensor, lot], (err, row) => {
-          if (err) {
-            reject(err)
-            return
-          }
+        // Primeiro, verificar se o sensor já existe e pegar a prioridade atual
+        db.get(
+          "SELECT available, priority FROM sensors WHERE idSensor = ? AND lot = ?",
+          [idSensor, lot],
+          (err, row) => {
+            if (err) {
+              reject(err)
+              return
+            }
 
-          const statusChanged = !row || row.available !== available
-          const now = new Date().toISOString()
+            // Se priority não foi enviada, preservar a prioridade existente
+            const finalPriority = priority !== undefined ? priority : row ? row.priority : false
+            const statusChanged = !row || row.available !== available
 
-          db.run(
-            `
-  INSERT INTO sensors (idSensor, lot, available, priority, last_changed)
-  VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-  ON CONFLICT(idSensor, lot) DO UPDATE SET
-      available = excluded.available,
-      priority = excluded.priority,
-      last_changed = CASE 
-          WHEN sensors.available != excluded.available THEN CURRENT_TIMESTAMP
-          ELSE sensors.last_changed
-      END
-  `,
-            [idSensor, lot, available, priority],
-            function (err) {
-              if (err) {
-                reject(err)
-              } else {
-                resolve(this.changes)
-              }
-            },
-          )
-        })
+            console.log(
+              `Sensor ${idSensor} no lot ${lot}: priority enviada=${priority}, priority final=${finalPriority}`,
+            )
+
+            db.run(
+              `
+            INSERT INTO sensors (idSensor, lot, available, priority, last_changed)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(idSensor, lot) DO UPDATE SET
+                available = excluded.available,
+                priority = excluded.priority,
+                last_changed = CASE 
+                    WHEN sensors.available != excluded.available THEN CURRENT_TIMESTAMP
+                    ELSE sensors.last_changed
+                END
+            `,
+              [idSensor, lot, available, finalPriority],
+              function (err) {
+                if (err) {
+                  reject(err)
+                } else {
+                  resolve(this.changes)
+                }
+              },
+            )
+          },
+        )
       })
     })
 
@@ -450,41 +459,50 @@ app.post("/api/sensors", authenticateToken, requireAdmin, (req, res) => {
       })
   } else {
     // Se os dados são um único objeto
-    const { idSensor, lot, available, priority = false } = data
+    const { idSensor, lot, available, priority } = data
 
-    // Primeiro, verificar se o status mudou
-    db.get("SELECT available FROM sensors WHERE idSensor = ? AND lot = ?", [idSensor, lot], (err, row) => {
+    console.log(`=== RECEBENDO DADOS DO SENSOR ===`)
+    console.log(`Sensor: ${idSensor}, Lot: ${lot}, Available: ${available}, Priority enviada: ${priority}`)
+
+    // Primeiro, verificar se o sensor já existe e pegar a prioridade atual
+    db.get("SELECT available, priority FROM sensors WHERE idSensor = ? AND lot = ?", [idSensor, lot], (err, row) => {
       if (err) {
+        console.error("Erro ao verificar sensor existente:", err.message)
         return res.status(500).json({
           message: "Erro ao verificar status atual.",
           error: err.message,
         })
       }
 
+      // Se priority não foi enviada (undefined), preservar a prioridade existente
+      const finalPriority = priority !== undefined ? priority : row ? row.priority : false
       const statusChanged = !row || row.available !== available
-      const now = new Date().toISOString()
+
+      console.log(`Priority existente: ${row ? row.priority : "nenhuma"}, Priority final: ${finalPriority}`)
 
       db.run(
         `
-  INSERT INTO sensors (idSensor, lot, available, priority, last_changed)
-  VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-  ON CONFLICT(idSensor, lot) DO UPDATE SET
-      available = excluded.available,
-      priority = excluded.priority,
-      last_changed = CASE 
-          WHEN sensors.available != excluded.available THEN CURRENT_TIMESTAMP
-          ELSE sensors.last_changed
-      END
-  `,
-        [idSensor, lot, available, priority],
+        INSERT INTO sensors (idSensor, lot, available, priority, last_changed)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(idSensor, lot) DO UPDATE SET
+            available = excluded.available,
+            priority = excluded.priority,
+            last_changed = CASE 
+                WHEN sensors.available != excluded.available THEN CURRENT_TIMESTAMP
+                ELSE sensors.last_changed
+            END
+        `,
+        [idSensor, lot, available, finalPriority],
         (err) => {
           if (err) {
+            console.error("Erro ao salvar dados do sensor:", err.message)
             return res.status(500).json({
               message: "Erro ao processar os dados no banco de dados.",
               error: err.message,
             })
           }
 
+          console.log(`Sensor ${idSensor} atualizado com sucesso. Priority preservada: ${finalPriority}`)
           res.status(200).json({
             message: "Dados processados com sucesso",
           })
@@ -492,6 +510,70 @@ app.post("/api/sensors", authenticateToken, requireAdmin, (req, res) => {
       )
     })
   }
+})
+
+// Endpoint de teste para simular dados do ESP32 (sem priority)
+app.post("/api/sensors/esp32-test", authenticateToken, requireAdmin, (req, res) => {
+  const { idSensor, lot, available } = req.body
+
+  console.log(`=== TESTE ESP32 ===`)
+  console.log(`Simulando dados do ESP32: Sensor ${idSensor}, Lot ${lot}, Available ${available}`)
+  console.log(`Nota: Priority NÃO enviada pelo ESP32`)
+
+  // Simular o que acontece quando o ESP32 envia dados (sem priority)
+  const espData = { idSensor, lot, available }
+
+  // Redirecionar para o endpoint principal de sensores
+  req.body = espData
+
+  // Primeiro, verificar se o sensor já existe e pegar a prioridade atual
+  db.get("SELECT available, priority FROM sensors WHERE idSensor = ? AND lot = ?", [idSensor, lot], (err, row) => {
+    if (err) {
+      console.error("Erro ao verificar sensor existente:", err.message)
+      return res.status(500).json({
+        message: "Erro ao verificar status atual.",
+        error: err.message,
+      })
+    }
+
+    // Como o ESP32 não envia priority, preservar a existente
+    const finalPriority = row ? row.priority : false
+    const statusChanged = !row || row.available !== available
+
+    console.log(`Priority existente preservada: ${finalPriority}`)
+    console.log(`Status mudou: ${statusChanged}`)
+
+    db.run(
+      `
+      INSERT INTO sensors (idSensor, lot, available, priority, last_changed)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(idSensor, lot) DO UPDATE SET
+          available = excluded.available,
+          priority = excluded.priority,
+          last_changed = CASE 
+              WHEN sensors.available != excluded.available THEN CURRENT_TIMESTAMP
+              ELSE sensors.last_changed
+          END
+      `,
+      [idSensor, lot, available, finalPriority],
+      (err) => {
+        if (err) {
+          console.error("Erro ao salvar dados do ESP32:", err.message)
+          return res.status(500).json({
+            message: "Erro ao processar dados do ESP32.",
+            error: err.message,
+          })
+        }
+
+        console.log(`✅ Dados do ESP32 processados. Priority ${finalPriority ? "PRESERVADA" : "mantida como false"}`)
+        res.status(200).json({
+          message: "Dados do ESP32 processados com sucesso",
+          preservedPriority: finalPriority,
+          statusChanged: statusChanged,
+        })
+      },
+    )
+  })
 })
 
 // Endpoint para listar os dados dos sensores (autenticado)
@@ -699,23 +781,63 @@ app.put("/api/sensors/:idSensor/:lot/priority", authenticateToken, requireAdmin,
   const { idSensor, lot } = req.params
   const { priority } = req.body
 
-  db.run(`UPDATE sensors SET priority = ? WHERE idSensor = ? AND lot = ?`, [priority, idSensor, lot], function (err) {
+  console.log(`=== ATUALIZANDO PRIORIDADE ===`)
+  console.log(`Sensor: ${idSensor}, Lot: ${lot}, Nova prioridade: ${priority}`)
+
+  // Primeiro verificar se a vaga existe
+  db.get("SELECT * FROM sensors WHERE idSensor = ? AND lot = ?", [idSensor, lot], (err, row) => {
     if (err) {
+      console.error("Erro ao verificar vaga:", err.message)
       return res.status(500).json({
-        message: "Erro ao atualizar prioridade da vaga.",
+        message: "Erro ao verificar vaga.",
         error: err.message,
       })
     }
 
-    if (this.changes === 0) {
-      return res.status(404).json({
-        message: "Vaga não encontrada.",
-      })
-    }
+    if (!row) {
+      console.log("Vaga não encontrada, criando nova vaga com prioridade")
+      // Se a vaga não existe, criar uma nova com status disponível e a prioridade especificada
+      db.run(
+        "INSERT INTO sensors (idSensor, lot, available, priority, last_changed) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+        [idSensor, lot, true, priority],
+        (err) => {
+          if (err) {
+            console.error("Erro ao criar vaga com prioridade:", err.message)
+            return res.status(500).json({
+              message: "Erro ao criar vaga com prioridade.",
+              error: err.message,
+            })
+          }
 
-    res.status(200).json({
-      message: "Prioridade da vaga atualizada com sucesso",
-    })
+          console.log(`Nova vaga criada: Sensor ${idSensor}, Lot ${lot}, Priority: ${priority}`)
+          res.status(200).json({
+            message: "Vaga criada com prioridade definida",
+          })
+        },
+      )
+    } else {
+      // Se a vaga existe, apenas atualizar a prioridade
+      console.log(`Vaga existente encontrada. Priority atual: ${row.priority}, Nova priority: ${priority}`)
+
+      db.run(
+        `UPDATE sensors SET priority = ? WHERE idSensor = ? AND lot = ?`,
+        [priority, idSensor, lot],
+        function (err) {
+          if (err) {
+            console.error("Erro ao atualizar prioridade:", err.message)
+            return res.status(500).json({
+              message: "Erro ao atualizar prioridade da vaga.",
+              error: err.message,
+            })
+          }
+
+          console.log(`Prioridade atualizada com sucesso. Linhas afetadas: ${this.changes}`)
+          res.status(200).json({
+            message: "Prioridade da vaga atualizada com sucesso",
+          })
+        },
+      )
+    }
   })
 })
 

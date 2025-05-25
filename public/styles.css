@@ -1227,3 +1227,70 @@ body.admin .admin-only {
 .export-button:hover {
   background: #16a34a;
 }
+
+/* Demo Modal Styles */
+.demo-explanation {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid var(--info-color);
+}
+
+.demo-explanation h4 {
+  color: var(--primary-color);
+  margin-bottom: 0.75rem;
+}
+
+.demo-explanation ol {
+  margin-left: 1rem;
+  margin-bottom: 1rem;
+}
+
+.demo-explanation li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.demo-explanation code {
+  background-color: #e9ecef;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-family: "Courier New", monospace;
+  font-size: 0.875rem;
+}
+
+.demo-steps {
+  background-color: #fff3cd;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  border: 1px solid #ffeaa7;
+  margin-top: 1rem;
+}
+
+.demo-steps h4 {
+  color: #856404;
+  margin-bottom: 0.5rem;
+}
+
+.demo-steps p {
+  margin-bottom: 0.25rem;
+  color: #856404;
+  font-size: 0.875rem;
+}
+
+/* Estilo especial para o botão de teste ESP32 */
+#test-esp32-btn {
+  background-color: #f59e0b !important;
+  border-color: #f59e0b !important;
+  color: white !important;
+}
+
+#test-esp32-btn:hover {
+  background-color: #d97706 !important;
+  border-color: #d97706 !important;
+}
+
+#test-esp32-btn i {
+  color: white !important;
+}

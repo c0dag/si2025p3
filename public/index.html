@@ -137,6 +137,10 @@
                                 <span>Remover Vagas</span>
                             </button>
                         </div>
+                        
+                        <!-- Novo botão de teste ESP32 -->
+                        
+                        
                         <div id="selection-controls" class="selection-controls hidden">
                             <p>Selecione as vagas para remover</p>
                             <div class="selection-buttons">
@@ -397,6 +401,37 @@
         </div>
     </div>
     
+    <!-- Modal para demonstração de persistência de prioridade -->
+    <div id="demo-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Demonstração: Persistência de Prioridade</h3>
+                <span class="close-demo-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="demo-explanation">
+                    <h4>Como funciona:</h4>
+                    <ol>
+                        <li><strong>ESP32 envia apenas:</strong> <code>{"idSensor": 3, "lot": 1, "available": true}</code></li>
+                        <li><strong>Sistema preserva:</strong> A prioridade existente no banco de dados</li>
+                        <li><strong>Resultado:</strong> Vagas prioritárias permanecem prioritárias</li>
+                    </ol>
+                    
+                    <div class="demo-steps">
+                        <h4>Teste prático:</h4>
+                        <p>1. Defina uma vaga como prioritária</p>
+                        <p>2. Simule dados do ESP32 (sem priority)</p>
+                        <p>3. Veja que a prioridade é preservada</p>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button id="cancel-demo-btn" class="modal-button cancel">Fechar</button>
+                    <button id="run-demo-btn" class="modal-button confirm">Executar Demonstração</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
