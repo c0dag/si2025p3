@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniPark - Sistema Inteligente de Estacionamento</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<link rel="shortcut icon" href="icon_logo_unipam.ico" />
+<body>
+    <div class="container">
+        <header class="main-header">
+            <div class="header-left">
+                <div class="logo-container">
+                    <img src="unipark.png" alt="Logo UniPark" class="logo">
+                </div>
+                <h1>UniPark</h1>
+            </div>
+            <div class="user-info">
+                <span id="user-welcome">Bem-vindo, <span id="username"></span></span>
+                <span id="user-role" class="user-role"></span>
+                <button id="logout-btn" class="logout-button">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Sair
+                </button>
+            </div>
+        </header>
+        
+        <!-- Connection alert -->
+        <div id="connection-alert" class="alert alert-error">
+            <i class="fas fa-exclamation-circle"></i>
+            <div>
+                <h4>Desconectado</h4>
+                <p>Não conectado ao servidor. Atualizações em tempo real indisponíveis.</p>
+            </div>
+        </div>
+        
+        <!-- Stats cards -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div>
+                    <p class="stat-title">Vagas Disponíveis</p>
+                    <div class="stat-value">
+                        <span id="available-count">0</span>
+                        <span class="stat-total">/ <span id="total-count">0</span></span>
+                    </div>
+                </div>
+                <div class="stat-icon available">
+                    <i class="fas fa-car"></i>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div>
+                    <p class="stat-title">Vagas Ocupadas</p>
+                    <div class="stat-value">
+                        <span id="occupied-count">0</span>
+                        <span class="stat-total">/ <span id="total-count-2">0</span></span>
+                    </div>
+                </div>
+                <div class="stat-icon occupied">
+                    <i class="fas fa-car"></i>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div>
+                    <p class="stat-title">Taxa de Ocupação</p>
+                    <div class="stat-value">
+                        <span id="occupancy-rate">0%</span>
+                    </div>
+                </div>
+                <div class="stat-icon rate">
+                    <i class="fas fa-percent"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main content -->
+        <div class="content-container">
+            <!-- Parking Selector Card (now on the left) -->
+            <div class="info-card">
+                <div class="card-header">
+                    <h2>Estacionamentos</h2>
+                </div>
+                <div class="card-content">
+                    <!-- Search functionality -->
+                    <div class="search-container admin-only">
+                        <input type="text" class="search-input" placeholder="Buscar estacionamentos..." onInput="searchLots(this.value)">
+                    </div>
+                    
+                    <!-- Parking Lot Selector -->
+                    <div class="parking-selector">
+                        <h3>Selecionar Estacionamento</h3>
+                        <div class="parking-buttons">
+                            <button id="parking-lot-1" class="parking-button active" data-lot="1">
+                                <i class="fas fa-parking"></i>
+                                <span>Estacionamento A</span>
+                            </button>
+                            <button id="parking-lot-2" class="parking-button" data-lot="2">
+                                <i class="fas fa-parking"></i>
+                                <span>Estacionamento B</span>
+                            </button>
+                            <button id="parking-lot-3" class="parking-button" data-lot="3">
+                                <i class="fas fa-parking"></i>
+                                <span>Estacionamento C</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Lot Info -->
+                    <div class="current-lot-info">
+                        <h3>Estacionamento Atual: <span id="current-lot-name">Estacionamento A</span></h3>
+                        <div class="lot-details">
+                            <div class="lot-detail">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span id="lot-location">Prédio Principal</span>
+                            </div>
+                            <div class="lot-detail">
+                                <i class="fas fa-car"></i>
+                                <span id="lot-capacity">20 Vagas</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Management Buttons (only for admins) -->
+                    <div id="management-controls" class="management-controls admin-only">
+                        <h3>Gerenciamento de Vagas</h3>
+                        <div class="management-buttons">
+                            <button id="add-space-btn" class="management-button">
+                                <i class="fas fa-plus"></i>
+                                <span>Adicionar Vaga</span>
+                            </button>
+                            <button id="remove-space-btn" class="management-button">
+                                <i class="fas fa-minus"></i>
+                                <span>Remover Vagas</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Novo botão de teste ESP32 -->
+                        
+                        
+                        <div id="selection-controls" class="selection-controls hidden">
+                            <p>Selecione as vagas para remover</p>
+                            <div class="selection-buttons">
+                                <button id="cancel-selection-btn" class="selection-button">
+                                    <i class="fas fa-times"></i>
+                                    <span>Cancelar</span>
+                                </button>
+                                <button id="confirm-selection-btn" class="selection-button">
+                                    <i class="fas fa-check"></i>
+                                    <span>Confirmar</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- User Management (only for admins) -->
+                    <div id="user-management" class="user-management admin-only">
+                        <h3>Gerenciamento de Usuários</h3>
+                        <div class="management-buttons">
+                            <button id="add-user-btn" class="management-button">
+                                <i class="fas fa-user-plus"></i>
+                                <span>Adicionar Usuário</span>
+                            </button>
+                            <button id="list-users-btn" class="management-button">
+                                <i class="fas fa-users"></i>
+                                <span>Listar Usuários</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Parking Lot Management (only for admins) -->
+                    <div id="lot-management" class="lot-management admin-only">
+                        <h3>Gerenciamento de Estacionamentos</h3>
+                        <div class="management-buttons">
+                            <button id="add-lot-btn" class="management-button">
+                                <i class="fas fa-plus"></i>
+                                <span>Adicionar Estacionamento</span>
+                            </button>
+                            <button id="remove-lot-btn" class="management-button">
+                                <i class="fas fa-trash"></i>
+                                <span>Remover Estacionamento</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Export button -->
+                        <button class="export-button" onclick="exportParkingData()">
+                            <i class="fas fa-download"></i>
+                            Exportar Dados
+                        </button>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div class="legend">
+                        <h3>Legenda</h3>
+                        <div class="legend-item">
+                            <div class="legend-color available"></div>
+                            <span>Disponível</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color occupied"></div>
+                            <span>Ocupada</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color priority"></div>
+                            <span>Prioridade</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Parking grid (now on the right) -->
+            <div class="main-card">
+                <div class="card-header">
+                    <h2>Status das Vagas</h2>
+                    <div id="connection-status" class="connection-status offline">
+                        <i class="fas fa-wifi"></i>
+                        <span>Offline</span>
+                    </div>
+                </div>
+                <div class="card-description">
+                    Última atualização: <span id="last-updated">Nunca</span>
+                </div>
+                <div class="card-content">
+                    <div id="parking-grid" class="parking-grid">
+                        <!-- Parking spaces will be added here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for adding new parking space -->
+    <div id="add-space-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="color: white !important;">Adicionar Nova Vaga</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="space-id">ID da Vaga:</label>
+                    <input type="text" id="space-id" placeholder="Ex: P21">
+                </div>
+                <div class="form-group">
+                    <label for="space-priority">
+                        <input type="checkbox" id="space-priority">
+                        Vaga de Prioridade
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button id="cancel-add-btn" class="modal-button cancel">Cancelar</button>
+                    <button id="confirm-add-btn" class="modal-button confirm">Adicionar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for adding new user -->
+    <div id="add-user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="color: white !important;">Adicionar Novo Usuário</h3>
+                <span class="close-user-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="new-username">Nome de Usuário:</label>
+                    <input type="text" id="new-username" placeholder="Digite o nome de usuário">
+                </div>
+                <div class="form-group">
+                    <label for="new-password">Senha:</label>
+                    <input type="password" id="new-password" placeholder="Digite a senha (mín. 6 caracteres)">
+                </div>
+                <div class="form-group">
+                    <label for="new-role">Tipo de Usuário:</label>
+                    <select id="new-role">
+                        <option value="user">Usuário Normal</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button id="cancel-user-btn" class="modal-button cancel">Cancelar</button>
+                    <button id="confirm-user-btn" class="modal-button confirm">Adicionar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for listing users -->
+    <div id="users-list-modal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3 style="color: white !important;">Lista de Usuários</h3>
+                <span class="close-users-list-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="users-list" class="users-list">
+                    <!-- Users will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for adding new parking lot - NOVA VERSÃO COMPLETAMENTE REFEITA -->
+    <div id="add-lot-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="color: white !important;">Adicionar Novo Estacionamento</h3>
+                <span class="close-lot-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="add-lot-form">
+                    <div class="form-group">
+                        <label for="new-lot-name">
+                            <span class="required-asterisk">*</span>
+                            Nome do Estacionamento:
+                        </label>
+                        <input 
+                            type="text" 
+                            id="new-lot-name" 
+                            name="name"
+                            placeholder="Ex: Estacionamento D" 
+                            required
+                            autocomplete="off"
+                        >
+                        <div class="validation-message" id="name-validation"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="new-lot-location">
+                            <span class="required-asterisk">*</span>
+                            Localização:
+                        </label>
+                        <input 
+                            type="text" 
+                            id="new-lot-location" 
+                            name="location"
+                            placeholder="Ex: Prédio de Engenharia" 
+                            required
+                            autocomplete="off"
+                        >
+                        <div class="validation-message" id="location-validation"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="new-lot-capacity">Capacidade Inicial:</label>
+                        <input 
+                            type="number" 
+                            id="new-lot-capacity" 
+                            name="capacity"
+                            placeholder="0" 
+                            min="0" 
+                            max="1000"
+                            value="0"
+                        >
+                        <small class="help-text">Deixe 0 para adicionar vagas posteriormente</small>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" id="cancel-new-lot-btn" class="modal-button cancel">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="submit-new-lot-btn" class="modal-button confirm" disabled>
+                            <span class="button-text">Adicionar</span>
+                            <span class="button-spinner hidden">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for removing parking lot -->
+    <div id="remove-lot-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="color: white !important;">Remover Estacionamento</h3>
+                <span class="close-remove-lot-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="lot-select">Selecione o estacionamento para remover:</label>
+                    <select id="lot-select">
+                        <option value="">Selecione um estacionamento</option>
+                    </select>
+                </div>
+                <div class="warning-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Atenção: Esta ação não pode ser desfeita. Certifique-se de que o estacionamento não possui vagas antes de removê-lo.</p>
+                </div>
+                <div class="form-actions">
+                    <button id="cancel-remove-lot-btn" class="modal-button cancel">Cancelar</button>
+                    <button id="confirm-remove-lot-btn" class="modal-button confirm">Remover</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para demonstração de persistência de prioridade -->
+    <div id="demo-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Demonstração: Persistência de Prioridade</h3>
+                <span class="close-demo-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="demo-explanation">
+                    <h4>Como funciona:</h4>
+                    <ol>
+                        <li><strong>ESP32 envia apenas:</strong> <code>{"idSensor": 3, "lot": 1, "available": true}</code></li>
+                        <li><strong>Sistema preserva:</strong> A prioridade existente no banco de dados</li>
+                        <li><strong>Resultado:</strong> Vagas prioritárias permanecem prioritárias</li>
+                    </ol>
+                    
+                    <div class="demo-steps">
+                        <h4>Teste prático:</h4>
+                        <p>1. Defina uma vaga como prioritária</p>
+                        <p>2. Simule dados do ESP32 (sem priority)</p>
+                        <p>3. Veja que a prioridade é preservada</p>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button id="cancel-demo-btn" class="modal-button cancel">Fechar</button>
+                    <button id="run-demo-btn" class="modal-button confirm">Executar Demonstração</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniPark - Login</title>
+    <link rel="stylesheet" href="login-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<link rel="shortcut icon" href="icon_logo_unipam.ico" />
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo-container">
+                    <img src="unipark.png" alt="Logo UniPark" class="logo">
+                </div>
+                <h1>UniPark</h1>
+                <p>Sistema Inteligente de Estacionamento</p>
+            </div>
+            
+            <form id="login-form" class="login-form">
+                <div class="form-group">
+                    <label for="username">Usuário</label>
+                    <div class="input-container">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" name="username" required placeholder="Digite seu usuário">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <div class="input-container">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" name="password" required placeholder="Digite sua senha">
+                    </div>
+                </div>
+                
+                <button type="submit" class="login-button" id="login-button">
+                    <span class="button-text">Entrar</span>
+                    <i class="fas fa-spinner fa-spin loading-icon hidden"></i>
+                </button>
+            </form>
+            
+            <div id="error-message" class="error-message hidden">
+                <i class="fas fa-exclamation-circle"></i>
+                <span></span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="login-script.js"></script>
+</body>
+</html>
